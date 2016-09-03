@@ -1,0 +1,11 @@
+name:"simple test"
+layer {
+ name: "data"
+ type: "Python"
+ top: "data"
+ python_param {
+   module: "HardExamMinLayer"
+   layer: "Render4CNNLayer"
+   param_str: "{\'source\': \'/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_image\', \'seed\': 1337,  \'batch_size\': 192}"
+ }
+}
