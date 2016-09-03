@@ -1,0 +1,70 @@
+From 70f9ffa1f51b35df7133804e9e4504044b665f70 Mon Sep 17 00:00:00 2001
+From: qchenao <oxymoron@sjtu.edu.cn>
+Date: Fri, 2 Sep 2016 15:25:55 -0700
+Subject: [PATCH 15/17] Add hard example mining layer.
+
+---
+ HardExamMinLayer.py                   | 26 ++++++++++++++++++++++++++
+ examples/imagenet/train_render4cnn.sh |  5 +++++
+ train_render4cnn.sh                   |  4 ++++
+ 3 files changed, 35 insertions(+)
+ create mode 100644 HardExamMinLayer.py
+ create mode 100755 examples/imagenet/train_render4cnn.sh
+ create mode 100644 train_render4cnn.sh
+
+diff --git a/HardExamMinLayer.py b/HardExamMinLayer.py
+new file mode 100644
+index 0000000..184a47b
+--- /dev/null
++++ b/HardExamMinLayer.py
+@@ -0,0 +1,26 @@
++import caffe
++import numpy as np
++import random
++import os, struct
++from array import array
++
++class HardExamMinLayer(caffe.Layer):
++
++    def setup(self, bottom, top):
++
++        if len(bottom) != 1:
++            raise Exception("Need one data to enter HardExamMinLayer.")
++        if len(top) != 1:
++            raise Exception("Only one data sent from HardExamMinLayer.")
++
++    def reshape(self, bottom, top):
++
++        pass
++
++    def forward(self, bottom, top):
++        # assign output
++        top[0].data[...] = bottom[0].data
++
++
++    def backward(self, top, propagate_down, bottom):
++        pass
+diff --git a/examples/imagenet/train_render4cnn.sh b/examples/imagenet/train_render4cnn.sh
+new file mode 100755
+index 0000000..d132dfb
+--- /dev/null
++++ b/examples/imagenet/train_render4cnn.sh
+@@ -0,0 +1,5 @@
++#!/usr/bin/env sh
++
++./build/tools/caffe train \
++    --solver=models/train/solver_ohem.prototxt
++    --gpu 1
+diff --git a/train_render4cnn.sh b/train_render4cnn.sh
+new file mode 100644
+index 0000000..f92a518
+--- /dev/null
++++ b/train_render4cnn.sh
+@@ -0,0 +1,4 @@
++#!/usr/bin/env sh
++
++./build/tools/caffe train \
++    --solver=/media/Work_4T/qchen/py-faster-rcnn/caffe-fast-rcnn/models/train/solver_ohem.prototxt
+-- 
+1.9.1
+

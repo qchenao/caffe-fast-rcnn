@@ -6,6 +6,6 @@ layer {
  python_param {
    module: "HardExamMinLayer"
    layer: "Render4CNNLayer"
-   param_str: "{\'source\': \'/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_image\', \'seed\': 1337,  \'batch_size\': 192}"
+   param_str: "{\'source\': \'./data/ShapeNet/syn_lmdb_train_image\', \'seed\': 1337,  \'batch_size\': 192}"
  }
 }

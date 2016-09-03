@@ -1,0 +1,1034 @@
+From bf7e9a8b4095f0cf19bf27eb484434d9f6de1846 Mon Sep 17 00:00:00 2001
+From: qchenao <oxymoron@sjtu.edu.cn>
+Date: Fri, 2 Sep 2016 15:24:58 -0700
+Subject: [PATCH 14/17] Add models/train prototxt for train_ohem
+
+---
+ models/train/solver.prototxt      |  14 +
+ models/train/solver_ohem.prototxt |  12 +
+ models/train/train_ohem.prototxt  | 432 ++++++++++++++++++++++++++++++
+ models/train/train_val.prototxt   | 533 ++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 991 insertions(+)
+ create mode 100644 models/train/solver.prototxt
+ create mode 100644 models/train/solver_ohem.prototxt
+ create mode 100644 models/train/train_ohem.prototxt
+ create mode 100644 models/train/train_val.prototxt
+
+diff --git a/models/train/solver.prototxt b/models/train/solver.prototxt
+new file mode 100644
+index 0000000..28ccbf1
+--- /dev/null
++++ b/models/train/solver.prototxt
+@@ -0,0 +1,14 @@
++net: "/media/Work_4T/qchen/RenderForCNN/train/train_val.prototxt"
++test_iter: 100
++test_interval: 1000
++base_lr: 0.001
++lr_policy: "step"
++gamma: 0.1
++stepsize: 20000
++display: 20
++max_iter: 80000
++momentum: 0.9
++weight_decay: 0.0005
++snapshot: 5000
++snapshot_prefix: "snapshots"
++solver_mode: GPU
+diff --git a/models/train/solver_ohem.prototxt b/models/train/solver_ohem.prototxt
+new file mode 100644
+index 0000000..aa3aa2b
+--- /dev/null
++++ b/models/train/solver_ohem.prototxt
+@@ -0,0 +1,12 @@
++train_net: "/media/Work_4T/qchen/py-faster-rcnn/caffe-fast-rcnn/models/train/train_ohem.prototxt"
++base_lr: 0.001
++lr_policy: "step"
++gamma: 0.1
++stepsize: 20000
++display: 20
++max_iter: 1000
++momentum: 0.9
++weight_decay: 0.0005
++snapshot: 5000
++snapshot_prefix: "snapshots"
++solver_mode: GPU
+diff --git a/models/train/train_ohem.prototxt b/models/train/train_ohem.prototxt
+new file mode 100644
+index 0000000..eea6fe8
+--- /dev/null
++++ b/models/train/train_ohem.prototxt
+@@ -0,0 +1,432 @@
++name: "RenderForCNN"
++layer {
++  name: "data"
++  type: "Data"
++  top: "data"
++  data_param {
++    source: "/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_image"
++    backend: LMDB
++    batch_size: 192
++  }
++
++  transform_param {
++    crop_size: 227
++    mean_value: 104
++    mean_value: 117
++    mean_value: 123
++    mirror: false
++  }
++  include: { phase: TRAIN }
++}
++#layer {
++#  name: "hard_mine"
++#  type: "Python"
++#  bottom: "data"
++#  top: "hard_mine"
++#  python_param {
++#    module: "HardExamMinLayer"
++#    layer: "HardExamMinLayer"
++#  }
++#}
++
++layer {
++  name: "data"
++  type: "Data"
++  top: "data"
++  data_param {
++    source: "/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_test_image"
++    backend: LMDB
++    batch_size: 64
++  }
++  transform_param {
++    crop_size: 227
++    mean_file: "/media/Work_4T/qchen/RenderForCNN/train/imagenet_mean.binaryproto"
++    mirror: false
++  }
++  include: { phase: TEST }
++}
++layer {
++  name: "label"
++  type: "Data"
++  top: "label"
++  data_param {
++    source: "/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_test_label"
++    backend: LMDB
++    batch_size: 64
++  }
++  include: { phase: TEST }
++}
++layer {
++  name: "label"
++  type: "Data"
++  top: "label"
++  data_param {
++    source: "/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_label"
++    backend: LMDB
++    batch_size: 192
++  }
++  include: { phase: TRAIN }
++}
++layer {
++  name: "labe-slice"
++  type: "Slice"
++  bottom: "label"
++  top: "label_class"
++  top: "label_azimuth"
++  top: "label_elevation"
++  top: "label_tilt"
++  slice_param {
++    slice_dim: 1
++    slice_point: 1
++    slice_point: 2
++    slice_point: 3
++  }
++}
++layer {
++  name: "conv1"
++  type: "Convolution"
++  bottom: "data"
++  top: "conv1"
++  param {
++    lr_mult: 1
++    decay_mult: 1
++  }
++  param {
++    lr_mult: 2
++    decay_mult: 0
++  }
++  convolution_param {
++    num_output: 96
++    kernel_size: 11
++    stride: 4
++    weight_filler {
++      type: "gaussian"
++      std: 0.01
++    }
++    bias_filler {
++      type: "constant"
++      value: 0
++    }
++  }
++}
++layer {
++  name: "relu1"
++  type: "ReLU"
++  bottom: "conv1"
++  top: "conv1"
++}
++layer {
++  name: "pool1"
++  type: "Pooling"
++  bottom: "conv1"
++  top: "pool1"
++  pooling_param {
++    pool: MAX
++    kernel_size: 3
++    stride: 2
++  }
++}
++layer {
++  name: "norm1"
++  type: "LRN"
++  bottom: "pool1"
++  top: "norm1"
++  lrn_param {
++    local_size: 5
++    alpha: 0.0001
++    beta: 0.75
++  }
++}
++layer {
++  name: "conv2"
++  type: "Convolution"
++  bottom: "norm1"
++  top: "conv2"
++  param {
++    lr_mult: 1
++    decay_mult: 1
++  }
++  param {
++    lr_mult: 2
++    decay_mult: 0
++  }
++  convolution_param {
++    num_output: 256
++    pad: 2
++    kernel_size: 5
++    group: 2
++    weight_filler {
++      type: "gaussian"
++      std: 0.01
++    }
++    bias_filler {
++      type: "constant"
++      value: 1
++    }
++  }
++}
++layer {
++  name: "relu2"
++  type: "ReLU"
++  bottom: "conv2"
++  top: "conv2"
++}
++layer {
++  name: "pool2"
++  type: "Pooling"
++  bottom: "conv2"
++  top: "pool2"
++  pooling_param {
++    pool: MAX
++    kernel_size: 3
++    stride: 2
++  }
++}
++layer {
++  name: "norm2"
++  type: "LRN"
++  bottom: "pool2"
++  top: "norm2"
++  lrn_param {
++    local_size: 5
++    alpha: 0.0001
++    beta: 0.75
++  }
++}
++layer {
++  name: "conv3"
++  type: "Convolution"
++  bottom: "norm2"
++  top: "conv3"
++  param {
++    lr_mult: 1
++    decay_mult: 1
++  }
++  param {
++    lr_mult: 2
++    decay_mult: 0
++  }
++  convolution_param {
++    num_output: 384
++    pad: 1
++    kernel_size: 3
++    weight_filler {
++      type: "gaussian"
++      std: 0.01
++    }
++    bias_filler {
++      type: "constant"
++      value: 0
++    }
++  }
++}
++layer {
++  bottom: "conv3"
++  top: "conv3"
++  name: "relu3"
++  type: "ReLU"
++}
++layer {
++  name: "conv4"
++  type: "Convolution"
++  bottom: "conv3"
++  top: "conv4"
++  param {
++    lr_mult: 1
++    decay_mult: 1
++  }
++  param {
++    lr_mult: 2
++    decay_mult: 0
++  }
++  convolution_param {
++    num_output: 384
++    pad: 1
++    kernel_size: 3
++    group: 2
++    weight_filler {
++      type: "gaussian"
++      std: 0.01
++    }
++    bias_filler {
++      type: "constant"
++      value: 1
++    }
++  }
++}
++layer {
++  name: "relu4"
++  type: "ReLU"
++  bottom: "conv4"
++  top: "conv4"
++}
++layer {
++  name: "conv5"
++  type: "Convolution"
++  bottom: "conv4"
++  top: "conv5"
++  param {
++    lr_mult: 1
++    decay_mult: 1
++  }
++  param {
++    lr_mult: 2
++    decay_mult: 0
++  }
++  convolution_param {
++    num_output: 256
++    pad: 1
++    kernel_size: 3
++    group: 2
++    weight_filler {
++      type: "gaussian"
++      std: 0.01
++    }
++    bias_filler {
++      type: "constant"
++      value: 1
++    }
++  }
++}
++layer {
++  name: "relu5"
++  type: "ReLU"
++  bottom: "conv5"
++  top: "conv5"
++}
++layer {
++  name: "pool5"
++  type: "Pooling"
++  bottom: "conv5"
++  top: "pool5"
++  pooling_param {
++    pool: MAX
++    kernel_size: 3
++    stride: 2
++  }
++}
++layer {
++  name: "fc6"
++  type: "InnerProduct"
++  bottom: "pool5"
++  top: "fc6"
++  param {
++    lr_mult: 1
++    decay_mult: 1
++  }
++  param {
++    lr_mult: 2
++    decay_mult: 0
++  }
++  inner_product_param {
++    num_output: 4096
++    weight_filler {
++      type: "gaussian"
++      std: 0.005
++    }
++    bias_filler {
++      type: "constant"
++      value: 1
++    }
++  }
++}
++layer {
++  name: "relu6"
++  type: "ReLU"
++  bottom: "fc6"
++  top: "fc6"
++}
++layer {
++  name: "drop6"
++  type: "Dropout"
++  bottom: "fc6"
++  top: "fc6"
++  dropout_param {
++    dropout_ratio: 0.5
++  }
++}
++layer {
++  name: "fc7"
++  type: "InnerProduct"
++  bottom: "fc6"
++  top: "fc7"
++  param {
++    lr_mult: 1
++    decay_mult: 1
++  }
++  param {
++    lr_mult: 2
++    decay_mult: 0
++  }
++  inner_product_param {
++    num_output: 4096
++    weight_filler {
++      type: "gaussian"
++      std: 0.005
++    }
++    bias_filler {
++      type: "constant"
++      value: 1
++    }
++  }
++}
++layer {
++  name: "relu7"
++  type: "ReLU"
++  bottom: "fc7"
++  top: "fc7"
++}
++layer {
++  name: "drop7"
++  type: "Dropout"
++  bottom: "fc7"
++  top: "fc7"
++  dropout_param {
++    dropout_ratio: 0.5
++  }
++}
++layer {
++  name: "fc-class"
++  type: "InnerProduct"
++  bottom: "fc7"
++  top: "fc-class"
++  param {
++    lr_mult: 1
++    decay_mult: 1
++  }
++  param {
++    lr_mult: 2
++    decay_mult: 0
++  }
++  inner_product_param {
++    num_output: 4320
++    weight_filler {
++      type: "gaussian"
++      std: 0.01
++    }
++    bias_filler {
++      type: "constant"
++      value: 0
++    }
++  }
++}
++layer {
++  name: "loss_class"
++  type: "SoftmaxWithLoss"
++  bottom: "fc-class"
++  bottom: "label_class"
++  top: "loss_class"
++  loss_weight: 1
++}
++
++
++layer {
++  name: "accuracy_class"
++  type: "Accuracy"
++  bottom: "fc-class"
++  bottom: "label_class"
++  top: "accuracy_class"
++}
++state {
++  phase: TRAIN
++}
+diff --git a/models/train/train_val.prototxt b/models/train/train_val.prototxt
+new file mode 100644
+index 0000000..85b6879
+--- /dev/null
++++ b/models/train/train_val.prototxt
+@@ -0,0 +1,533 @@
++name: "RenderForCNN"
++layers {
++  name: "data"
++  type: DATA
++  top: "data"
++  data_param {
++    source: "/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_image"
++    backend: LMDB
++    batch_size: 192
++  }
++  transform_param {
++    crop_size: 227
++    mean_file: "/media/Work_4T/qchen/RenderForCNN/train/imagenet_mean.binaryproto"
++    mirror: false
++  }
++  include: { phase: TRAIN }
++}
++layers {
++  name: "label"
++  type: DATA
++  top: "label"
++  data_param {
++    source: "/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_label"
++    backend: LMDB
++    batch_size: 192
++  }
++  include: { phase: TRAIN }
++}
++layers {
++  name: "data"
++  type: DATA
++  top: "data"
++  data_param {
++    source: "/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_test_image"
++    backend: LMDB
++    batch_size: 64
++  }
++  transform_param {
++    crop_size: 227
++    mean_file: "/media/Work_4T/qchen/RenderForCNN/train/imagenet_mean.binaryproto"
++    mirror: false
++  }
++  include: { phase: TEST }
++}
++layers {
++  name: "label"
++  type: DATA
++  top: "label"
++  data_param {
++    source: "/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_test_label"
++    backend: LMDB
++    batch_size: 64
++  }
++  include: { phase: TEST }
++}
++layers {
++  name: "labe-slice"
++  type: SLICE
++  bottom: "label"
++  top: "label_class"
++  top: "label_azimuth"
++  top: "label_elevation"
++  top: "label_tilt"
++  slice_param {
++    slice_dim: 1
++    slice_point: 1
++    slice_point: 2
++    slice_point: 3
++  }
++}
++layers {
++  name: "conv1"
++  type: CONVOLUTION
++  bottom: "data"
++  top: "conv1"
++  blobs_lr: 1
++  blobs_lr: 2
++  weight_decay: 1
++  weight_decay: 0
++  convolution_param {
++    num_output: 96
++    kernel_size: 11
++    stride: 4
++    weight_filler {
++      type: "gaussian"
++      std: 0.01
++    }
++    bias_filler {
++      type: "constant"
++      value: 0
++    }
++  }
++}
++layers {
++  name: "relu1"
++  type: RELU
++  bottom: "conv1"
++  top: "conv1"
++}
++layers {
++  name: "pool1"
++  type: POOLING
++  bottom: "conv1"
++  top: "pool1"
++  pooling_param {
++    pool: MAX
++    kernel_size: 3
++    stride: 2
++  }
++}
++layers {
++  name: "norm1"
++  type: LRN
++  bottom: "pool1"
++  top: "norm1"
++  lrn_param {
++    local_size: 5
++    alpha: 0.0001
++    beta: 0.75
++  }
++}
++layers {
++  name: "conv2"
++  type: CONVOLUTION
++  bottom: "norm1"
++  top: "conv2"
++  blobs_lr: 1
++  blobs_lr: 2
++  weight_decay: 1
++  weight_decay: 0
++  convolution_param {
++    num_output: 256
++    pad: 2
++    kernel_size: 5
++    group: 2
++    weight_filler {
++      type: "gaussian"
++      std: 0.01
++    }
++    bias_filler {
++      type: "constant"
++      value: 1
++    }
++  }
++}
++layers {
++  name: "relu2"
++  type: RELU
++  bottom: "conv2"
++  top: "conv2"
++}
++layers {
++  name: "pool2"
++  type: POOLING
++  bottom: "conv2"
++  top: "pool2"
++  pooling_param {
++    pool: MAX
++    kernel_size: 3
++    stride: 2
++  }
++}
++layers {
++  name: "norm2"
++  type: LRN
++  bottom: "pool2"
++  top: "norm2"
++  lrn_param {
++    local_size: 5
++    alpha: 0.0001
++    beta: 0.75
++  }
++}
++layers {
++  name: "conv3"
++  type: CONVOLUTION
++  bottom: "norm2"
++  top: "conv3"
++  blobs_lr: 1
++  blobs_lr: 2
++  weight_decay: 1
++  weight_decay: 0
++  convolution_param {
++    num_output: 384
++    pad: 1
++    kernel_size: 3
++    weight_filler {
++      type: "gaussian"
++      std: 0.01
++    }
++    bias_filler {
++      type: "constant"
++      value: 0
++    }
++  }
++}
++layers {
++  bottom: "conv3"
++  top: "conv3"
++  name: "relu3"
++  type: RELU
++}
++layers {
++  name: "conv4"
++  type: CONVOLUTION
++  bottom: "conv3"
++  top: "conv4"
++  blobs_lr: 1
++  blobs_lr: 2
++  weight_decay: 1
++  weight_decay: 0
++  convolution_param {
++    num_output: 384
++    pad: 1
++    kernel_size: 3
++    group: 2
++    weight_filler {
++      type: "gaussian"
++      std: 0.01
++    }
++    bias_filler {
++      type: "constant"
++      value: 1
++    }
++  }
++}
++layers {
++  name: "relu4"
++  type: RELU
++  bottom: "conv4"
++  top: "conv4"
++}
++layers {
++  name: "conv5"
++  type: CONVOLUTION
++  bottom: "conv4"
++  top: "conv5"
++  blobs_lr: 1
++  blobs_lr: 2
++  weight_decay: 1
++  weight_decay: 0
++  convolution_param {
++    num_output: 256
++    pad: 1
++    kernel_size: 3
++    group: 2
++    weight_filler {
++      type: "gaussian"
++      std: 0.01
++    }
++    bias_filler {
++      type: "constant"
++      value: 1
++    }
++  }
++}
++layers {
++  name: "relu5"
++  type: RELU
++  bottom: "conv5"
++  top: "conv5"
++}
++layers {
++  name: "pool5"
++  type: POOLING
++  bottom: "conv5"
++  top: "pool5"
++  pooling_param {
++    pool: MAX
++    kernel_size: 3
++    stride: 2
++  }
++}
++layers {
++  name: "fc6"
++  type: INNER_PRODUCT
++  bottom: "pool5"
++  top: "fc6"
++  blobs_lr: 1
++  blobs_lr: 2
++  weight_decay: 1
++  weight_decay: 0
++  inner_product_param {
++    num_output: 4096
++    weight_filler {
++      type: "gaussian"
++      std: 0.005
++    }
++    bias_filler {
++      type: "constant"
++      value: 1
++    }
++  }
++}
++layers {
++  name: "relu6"
++  type: RELU
++  bottom: "fc6"
++  top: "fc6"
++}
++layers {
++  name: "drop6"
++  type: DROPOUT
++  bottom: "fc6"
++  top: "fc6"
++  dropout_param {
++    dropout_ratio: 0.5
++  }
++}
++layers {
++  name: "fc7"
++  type: INNER_PRODUCT
++  bottom: "fc6"
++  top: "fc7"
++  blobs_lr: 1
++  blobs_lr: 2
++  weight_decay: 1
++  weight_decay: 0
++  inner_product_param {
++    num_output: 4096
++    weight_filler {
++      type: "gaussian"
++      std: 0.005
++    }
++    bias_filler {
++      type: "constant"
++      value: 1
++    }
++  }
++}
++layers {
++  name: "relu7"
++  type: RELU
++  bottom: "fc7"
++  top: "fc7"
++}
++layers {
++  name: "drop7"
++  type: DROPOUT
++  bottom: "fc7"
++  top: "fc7"
++  dropout_param {
++    dropout_ratio: 0.5
++  }
++}
++
++layers {
++  name: "fc-class"
++  type: INNER_PRODUCT
++  bottom: "fc7"
++  top: "fc-class"
++  blobs_lr: 1
++  blobs_lr: 2
++  weight_decay: 1
++  weight_decay: 0
++  inner_product_param {
++    num_output: 4320
++    weight_filler {
++      type: "gaussian"
++      std: 0.01
++    }
++    bias_filler {
++      type: "constant"
++      value: 0
++    }
++  }
++}
++layers {
++  name: "loss_class"
++  type: SOFTMAX
++  bottom: "fc-class"
++  bottom: "label_class"
++  top: "loss_class"
++  loss_weight: 1
++}
++ 
++layers {
++  name: "fc-azimuth"
++  type: INNER_PRODUCT
++  bottom: "fc7"
++  top: "fc-azimuth"
++  blobs_lr: 1
++  blobs_lr: 2
++  weight_decay: 1
++  weight_decay: 0
++  inner_product_param {
++    num_output: 4320
++    weight_filler {
++      type: "gaussian"
++      std: 0.01
++    }
++    bias_filler {
++      type: "constant"
++      value: 0
++    }
++  }
++}
++layers {
++  name: "loss_azimuth"
++  type: SOFTMAX_WITH_VIEW_LOSS
++  softmax_with_view_loss_param {
++    bandwidth: 15
++    sigma: 5
++    pos_weight: 1
++    neg_weight: 0
++    period: 360
++  }
++  bottom: "fc-azimuth"
++  bottom: "label_azimuth"
++  top: "loss_azimuth"
++  loss_weight: 1
++}
++layers {
++  name: "accuracy_azimuth"
++  type: ACCURACY_VIEW
++  bottom: "fc-azimuth"
++  bottom: "label_azimuth"
++  top: "accuracy_azimuth"
++  accuracy_view_param {
++    tol_angle: 15
++    period: 360
++  }
++}
++
++
++layers {
++  name: "fc-elevation"
++  type: INNER_PRODUCT
++  bottom: "fc7"
++  top: "fc-elevation"
++  blobs_lr: 1
++  blobs_lr: 2
++  weight_decay: 1
++  weight_decay: 0
++  inner_product_param {
++    num_output: 4320
++    weight_filler {
++      type: "gaussian"
++      std: 0.01
++    }
++    bias_filler {
++      type: "constant"
++      value: 0
++    }
++  }
++}
++layers {
++  name: "loss_elevation"
++  type: SOFTMAX_WITH_VIEW_LOSS
++  softmax_with_view_loss_param {
++    bandwidth: 5
++    sigma: 3
++    pos_weight: 1
++    neg_weight: 0
++    period: 360
++  }
++  bottom: "fc-elevation"
++  bottom: "label_elevation"
++  top: "loss_elevation"
++  loss_weight: 1
++}
++
++layers {
++  name: "accuracy_elevation"
++  type: ACCURACY_VIEW
++  bottom: "fc-elevation"
++  bottom: "label_elevation"
++  top: "accuracy_elevation"
++  accuracy_view_param {
++    tol_angle: 5
++    period: 360
++  }
++}
++
++
++layers {
++  name: "fc-tilt"
++  type: INNER_PRODUCT
++  bottom: "fc7"
++  top: "fc-tilt"
++  blobs_lr: 1
++  blobs_lr: 2
++  weight_decay: 1
++  weight_decay: 0
++  inner_product_param {
++    num_output: 4320
++    weight_filler {
++      type: "gaussian"
++      std: 0.01
++    }
++    bias_filler {
++      type: "constant"
++      value: 0
++    }
++  }
++}
++layers {
++  name: "loss_tilt"
++  type: SOFTMAX_WITH_VIEW_LOSS
++  softmax_with_view_loss_param {
++    bandwidth: 5
++    sigma: 3
++    pos_weight: 1
++    neg_weight: 0
++    period: 360
++  }
++  bottom: "fc-tilt"
++  bottom: "label_tilt"
++  top: "loss_tilt"
++  loss_weight: 1
++}
++
++layers {
++  name: "accuracy_tilt"
++  type: ACCURACY_VIEW
++  bottom: "fc-tilt"
++  bottom: "label_tilt"
++  top: "accuracy_tilt"
++  accuracy_view_param {
++    tol_angle: 5
++    period: 360
++  }
++}
++layers {
++  name: "accuracy_class"
++  type: ACCURACY
++  bottom: "label_class"
++  bottom: "fc-class"
++  top: "accuracy_class"
++}
++state {
++  phase: TRAIN
++}
+-- 
+1.9.1
+

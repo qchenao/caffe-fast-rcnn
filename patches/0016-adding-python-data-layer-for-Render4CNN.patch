@@ -1,0 +1,228 @@
+From 16571ea3ed51cfdfe165f1df8a85f9787f98fb87 Mon Sep 17 00:00:00 2001
+From: qchenao <oxymoron@sjtu.edu.cn>
+Date: Sat, 3 Sep 2016 13:10:26 -0700
+Subject: [PATCH 16/17] adding python data layer for Render4CNN
+
+---
+ HardExamMinLayer.py              |  26 ---------
+ models/train/solver.prototxt     |   2 +-
+ models/train/train_ohem.prototxt | 118 ++++++++++++++++++++++++---------------
+ 3 files changed, 75 insertions(+), 71 deletions(-)
+ delete mode 100644 HardExamMinLayer.py
+
+diff --git a/HardExamMinLayer.py b/HardExamMinLayer.py
+deleted file mode 100644
+index 184a47b..0000000
+--- a/HardExamMinLayer.py
++++ /dev/null
+@@ -1,26 +0,0 @@
+-import caffe
+-import numpy as np
+-import random
+-import os, struct
+-from array import array
+-
+-class HardExamMinLayer(caffe.Layer):
+-
+-    def setup(self, bottom, top):
+-
+-        if len(bottom) != 1:
+-            raise Exception("Need one data to enter HardExamMinLayer.")
+-        if len(top) != 1:
+-            raise Exception("Only one data sent from HardExamMinLayer.")
+-
+-    def reshape(self, bottom, top):
+-
+-        pass
+-
+-    def forward(self, bottom, top):
+-        # assign output
+-        top[0].data[...] = bottom[0].data
+-
+-
+-    def backward(self, top, propagate_down, bottom):
+-        pass
+diff --git a/models/train/solver.prototxt b/models/train/solver.prototxt
+index 28ccbf1..7bde4ac 100644
+--- a/models/train/solver.prototxt
++++ b/models/train/solver.prototxt
+@@ -6,7 +6,7 @@ lr_policy: "step"
+ gamma: 0.1
+ stepsize: 20000
+ display: 20
+-max_iter: 80000
++max_iter: 1000
+ momentum: 0.9
+ weight_decay: 0.0005
+ snapshot: 5000
+diff --git a/models/train/train_ohem.prototxt b/models/train/train_ohem.prototxt
+index eea6fe8..fdbb886 100644
+--- a/models/train/train_ohem.prototxt
++++ b/models/train/train_ohem.prototxt
+@@ -1,34 +1,55 @@
+ name: "RenderForCNN"
++# layer {
++#   name: "data"
++#   type: "Data"
++#   top: "data"
++#   data_param {
++#     source: "/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_image"
++#     backend: LMDB
++#     batch_size: 192
++#
++#   }
++#
++#   transform_param {
++#     crop_size: 227
++#     mean_value: 104
++#     mean_value: 117
++#     mean_value: 123
++#     mirror: false
++#   }
++#   include: { phase: TRAIN }
++# }
++# layer {
++#   name: "label"
++#   type: "Data"
++#   top: "label"
++#   data_param {
++#     source: "/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_label"
++#     backend: LMDB
++#     batch_size: 192
++#   }
++#   include: { phase: TRAIN }
++# }
+ layer {
+-  name: "data"
+-  type: "Data"
+-  top: "data"
+-  data_param {
+-    source: "/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_image"
+-    backend: LMDB
+-    batch_size: 192
+-  }
+-
+-  transform_param {
+-    crop_size: 227
+-    mean_value: 104
+-    mean_value: 117
+-    mean_value: 123
+-    mirror: false
+-  }
+-  include: { phase: TRAIN }
++ name: "data"
++ type: "Python"
++ top: "data"
++ python_param {
++   module: "HardExamMinLayer"
++   layer: "Render4CNNLayer"
++   param_str: "{\'source\': \'/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_image\', \'seed\': 1337,  \'batch_size\': 192}"
++ }
++}
++layer {
++ name: "label"
++ type: "Python"
++ top: "label"
++ python_param {
++   module: "HardExamMinLayer"
++   layer: "Render4CNNLayer"
++   param_str: "{\'source\': \'/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_label\', \'seed\': 1337,  \'batch_size\': 192}"
++ }
+ }
+-#layer {
+-#  name: "hard_mine"
+-#  type: "Python"
+-#  bottom: "data"
+-#  top: "hard_mine"
+-#  python_param {
+-#    module: "HardExamMinLayer"
+-#    layer: "HardExamMinLayer"
+-#  }
+-#}
+-
+ layer {
+   name: "data"
+   type: "Data"
+@@ -56,17 +77,7 @@ layer {
+   }
+   include: { phase: TEST }
+ }
+-layer {
+-  name: "label"
+-  type: "Data"
+-  top: "label"
+-  data_param {
+-    source: "/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_label"
+-    backend: LMDB
+-    batch_size: 192
+-  }
+-  include: { phase: TRAIN }
+-}
++
+ layer {
+   name: "labe-slice"
+   type: "Slice"
+@@ -391,15 +402,15 @@ layer {
+   bottom: "fc7"
+   top: "fc-class"
+   param {
+-    lr_mult: 1
++    lr_mult: 0
+     decay_mult: 1
+   }
+   param {
+-    lr_mult: 2
++    lr_mult: 0
+     decay_mult: 0
+   }
+   inner_product_param {
+-    num_output: 4320
++    num_output: 12
+     weight_filler {
+       type: "gaussian"
+       std: 0.01
+@@ -410,16 +421,28 @@ layer {
+     }
+   }
+ }
++# layer {
++#   name: "loss_class"
++#   type: "SoftmaxWithLoss"
++#   bottom: "fc-class"
++#   bottom: "label_class"
++#   top: "loss_class"
++#   loss_weight: 1
++# }
+ layer {
+   name: "loss_class"
+-  type: "SoftmaxWithLoss"
++  type: "Python"
+   bottom: "fc-class"
+   bottom: "label_class"
+   top: "loss_class"
++  python_param {
++    module: "MySoftmaxLayer"
++    layer: "MySoftmaxLayer"
++
++  }
+   loss_weight: 1
+ }
+ 
+-
+ layer {
+   name: "accuracy_class"
+   type: "Accuracy"
+@@ -430,3 +453,10 @@ layer {
+ state {
+   phase: TRAIN
+ }
++layer {
++  name: "silence_layer"
++  type: "Silence"
++  bottom: "label_azimuth"
++  bottom: "label_elevation"
++  bottom: "label_tilt"
++}
+-- 
+1.9.1
+
