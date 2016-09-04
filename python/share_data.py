@@ -13,3 +13,5 @@ imgnet_mean=np.ndarray(shape=(3,227,227),dtype=int)
 imgnet_mean[0] = 104
 imgnet_mean[1] = 117
 imgnet_mean[2] = 123
+
+Render4CNN_Ind = np.random.randint(0,2314400,size=2314401)

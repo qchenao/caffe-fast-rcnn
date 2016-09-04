@@ -6,6 +6,8 @@ from array import array
 import share_data
 from lmdb_reader import Read_Render4CNN
 import pdb
+
+
 class Render4CNNLayer(caffe.Layer):
 
     def setup(self, bottom, top):
@@ -65,6 +67,128 @@ class Render4CNNLayer(caffe.Layer):
 
     def backward(self, top, propagate_down, bottom):
         pass
+
+
+class Render4CNNLayer_hard(caffe.Layer):
+
+    def setup(self, bottom, top):
+
+        self.idx = []
+        self.data = []
+        params = eval(self.param_str_)
+        self.source = params['source']
+        self.init = params.get('init', True)
+        self.seed = params.get('seed', None)
+        self.batch_size=params.get('batch_size', 64)
+
+        # two tops: data and label
+        if len(top) != 1:
+            raise Exception("Need to define 1 top: data or label.")
+        # data layers have no bottoms
+        if len(bottom) != 0:
+            raise Exception("Do not define a bottom.")
+
+
+        self.iidx = np.arange(self.batch_size)
+        self.idx = share_data.Render4CNN_Ind[self.iidx]
+
+
+
+    def reshape(self, bottom, top):
+
+        self.data = Read_Render4CNN(self.source,self.idx)
+
+        if 'image' in self.source:
+            self.data = self.data.reshape(self.batch_size,3,227,227)
+            self.data -= share_data.imgnet_mean
+            top[0].reshape(self.batch_size,3,227,227)
+        else:
+            top[0].reshape(self.batch_size,4,1,1)
+            self.data = self.data.reshape(self.batch_size,4,1,1)
+        print 'iidx', self.idx
+
+
+    def forward(self, bottom, top):
+        # assign output
+        top[0].data[...] = self.data
+
+
+        self.iidx = (self.iidx + self.batch_size) % 2314401
+
+        #new epoch, shuffle again
+        if np.max(self.iidx) < self.batch_size:
+            share_data.Render4CNN_Ind = np.random.randint(0,2314400,size=2314401)
+
+        self.idx = share_data.Render4CNN_Ind[self.iidx]
+
+
+
+
+
+
+    def backward(self, top, propagate_down, bottom):
+        pass
+
+
+class MySoftmaxLayer_hard(caffe.Layer):
+
+    def setup(self, bottom, top):
+
+        # check input pair
+        if len(bottom) != 2:
+            raise Exception("Need two inputs to compute distance.")
+	    #params = eval(self.param_str)
+        #self.split = params['split']
+
+    def reshape(self, bottom, top):
+
+        # check input dimensions match
+        if bottom[0].num != bottom[1].num:
+            raise Exception("Inputs must have the same dimension.")
+            #raise Exception("Inputs must have the same dimension.")
+        # difference is shape of inputs
+        self.diff = np.zeros_like(bottom[0].data, dtype=np.float32)
+        # loss output is scalar
+        top[0].reshape(1)
+
+    def forward(self, bottom, top):
+
+        scores = np.array(bottom[0].data)
+
+        #to make softmax stable
+        tmp = np.tile(np.max(scores,axis=1),np.max(bottom[1].data).astype(int)+1)
+        tmp = tmp.reshape(scores.T.shape).T
+        scores = scores-tmp
+
+        exp_scores = np.exp(scores)
+        probs = exp_scores / np.sum(exp_scores, axis=1, keepdims=True)
+        correct_logprobs = -np.log(probs[range(bottom[0].num),np.array(bottom[1].data,dtype=np.uint16).reshape(bottom[1].num)]+10**(-10))
+
+        data_loss = np.sum(correct_logprobs)/bottom[0].num
+        '''
+        if self.split is 'training':
+            if share_data.flag:
+                share_data.data_loss = []
+            share_data.data_loss = np.append(share_data.data_loss, correct_logprobs)
+	    #print 'loss', share_data.data_loss.shape
+        '''
+
+        self.diff[...] = probs
+        top[0].data[...] = data_loss
+
+
+    def backward(self, top, propagate_down, bottom):
+
+        delta = self.diff
+
+
+        #for i in range(2):
+        if propagate_down[1]:
+            raise Exception("Layer cannot backprop to label inputs.")
+        if propagate_down[0]:
+            delta[range(bottom[0].num), np.array(bottom[1].data,dtype=np.uint16).reshape(bottom[1].num)] -= 1
+            bottom[0].diff[...] = delta/bottom[0].num
+
 
 
 
