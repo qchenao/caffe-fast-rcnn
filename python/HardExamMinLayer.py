@@ -44,7 +44,7 @@ class Render4CNNLayer(caffe.Layer):
         else:
             top[0].reshape(self.batch_size,4,1,1)
             self.data = self.data.reshape(self.batch_size,4,1,1)
-        print 'iidx', self.idx
+        
 
 
     def forward(self, bottom, top):
