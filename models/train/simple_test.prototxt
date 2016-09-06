@@ -1,11 +1,27 @@
 name:"simple test"
 layer {
- name: "data"
- type: "Python"
- top: "data"
- python_param {
-   module: "HardExamMinLayer"
-   layer: "Render4CNNLayer"
-   param_str: "{\'source\': \'./data/ShapeNet/syn_lmdb_train_image\', \'seed\': 1337,  \'batch_size\': 192}"
- }
+  name: "label"
+  type: "Data"
+  top: "label"
+  data_param {
+    source: "/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_label"
+    backend: LMDB
+    batch_size: 38
+  }
+  include: { phase: TRAIN }
+}
+layer {
+  name: "labe-slice"
+  type: "Slice"
+  bottom: "label"
+  top: "label_class"
+  top: "label_azimuth"
+  top: "label_elevation"
+  top: "label_tilt"
+  slice_param {
+    slice_dim: 1
+    slice_point: 1
+    slice_point: 2
+    slice_point: 3
+  }
 }

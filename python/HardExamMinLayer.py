@@ -35,7 +35,7 @@ class Render4CNNLayer(caffe.Layer):
 
     def reshape(self, bottom, top):
 
-        self.data = Read_Render4CNN(self.source,self.idx)
+        self.data = Read_Render4CNN(self.source,self.iidx)
 
         if 'image' in self.source:
             self.data = self.data.reshape(self.batch_size,3,227,227)
@@ -44,13 +44,15 @@ class Render4CNNLayer(caffe.Layer):
         else:
             top[0].reshape(self.batch_size,4,1,1)
             self.data = self.data.reshape(self.batch_size,4,1,1)
-        
+
 
 
     def forward(self, bottom, top):
         # assign output
+
         top[0].data[...] = self.data
 
+        #training small amount of data
 
         self.iidx = (self.iidx + self.batch_size) % 2314401
 
@@ -59,6 +61,8 @@ class Render4CNNLayer(caffe.Layer):
             share_data.Render4CNN_Ind = np.random.randint(0,2314400,size=2314401)
 
         self.idx = share_data.Render4CNN_Ind[self.iidx]
+
+
 
 
 
@@ -77,8 +81,6 @@ class Render4CNNLayer_hard(caffe.Layer):
         self.data = []
         params = eval(self.param_str_)
         self.source = params['source']
-        self.init = params.get('init', True)
-        self.seed = params.get('seed', None)
         self.batch_size=params.get('batch_size', 64)
 
         # two tops: data and label

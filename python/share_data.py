@@ -15,3 +15,6 @@ imgnet_mean[1] = 117
 imgnet_mean[2] = 123
 
 Render4CNN_Ind = np.random.randint(0,2314400,size=2314401)
+
+state = 1
+iters = 0
