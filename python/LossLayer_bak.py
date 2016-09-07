@@ -69,6 +69,7 @@ class SoftmaxViewLoss(caffe.Layer):
 
         self.cls_idx = np.array(self.label / (self.period))
         nonbg_ind = (self.cls_idx != 12)
+        bg_ind = (self.cls_idx == 12)
 
         probs_cls_data = self.prob_data.reshape(num, 12, 360)
 
@@ -83,9 +84,9 @@ class SoftmaxViewLoss(caffe.Layer):
         #print 'probs_cls_sum[0]',probs_cls_sum[0]
         #print 'probs_cls_data:after', probs_cls_data[0, self.cls_idx[0]]
 
-        diff = np.zeros_like(probs_cls_data)
-        diff[nonbg_ind, self.cls_idx[nonbg_ind]] = np.array(probs_cls_data[nonbg_ind, self.cls_idx[nonbg_ind]] * self.weights_sum)
-        diff *= self.weight
+
+        #diff[nonbg_ind, self.cls_idx[nonbg_ind]] = np.array(probs_cls_data[nonbg_ind, self.cls_idx[nonbg_ind]] * self.weights_sum)
+
 
         # convert to 360-class self.label
         view_label = self.label % (self.period)
@@ -106,23 +107,26 @@ class SoftmaxViewLoss(caffe.Layer):
         label_value_k = view_k + cls_idx_broad + ex_ind
 
         self.prob_data = probs_cls_data.reshape(num* self.dim)
-        diff = diff.reshape(num* self.dim)
-        # self.diff = diff.copy()
+        diff = np.zeros_like(self.prob_data)
+        diff [label_value_k ] = (1 / self.prob_data[label_value_k] - 1) * np.exp(-abs(k) / self.sigma) / num
+
         tmp = self.prob_data[label_value_k]
         tmp = tmp[nonbg_ind]
-
-        # loss is weighted by exp(-|dist|/sigma)
         tmp -= np.exp(-abs(k[nonbg_ind]) / self.sigma) * np.log(tmp + 10**(-37))
+        diff += self.prob_data
         tmp = np.sum(tmp, axis=1) * self.weight.T[0][0][nonbg_ind]
         top[0].data[...] = np.sum(tmp) / num
 
+        self.diff = diff.reshape(num, self.dim)
+        self.diff[bg_ind] = 0
+
+
         #ipdb.set_trace()
         # Equivalent to self.diff[label_value_k][nonbg_ind] = diff[label_value_k][nonbg_ind] - np.exp(-abs(k[nonbg_ind]) / self.sigma) * self.weight.reshape(num* self.dim)[label_value_k][nonbg_ind]
-        tmp = diff[label_value_k]
-        tmp[nonbg_ind] -= np.exp(-abs(k[nonbg_ind]) / self.sigma) * self.weight.reshape(num* self.dim)[label_value_k][nonbg_ind]
-        diff[label_value_k] = tmp 
-        diff /= num
-        self.diff = diff.reshape(*bottom[0].data.shape)
+
+
+        for i in range(num):
+            print self.diff[i]
 
     def backward(self, top, propagate_down, bottom):
 
