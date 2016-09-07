@@ -4,7 +4,7 @@ name: "RenderForCNN"
 #   type: "Data"
 #   top: "data"
 #   data_param {
-#     source: "/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_image"
+#     source: "./data/ShapeNet/syn_lmdb_train_image"
 #     backend: LMDB
 #     batch_size: 192
 #
@@ -24,7 +24,7 @@ name: "RenderForCNN"
 #   type: "Data"
 #   top: "label"
 #   data_param {
-#     source: "/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_label"
+#     source: "./data/ShapeNet/syn_lmdb_train_label"
 #     backend: LMDB
 #     batch_size: 192
 #   }
@@ -37,7 +37,7 @@ layer {
  python_param {
    module: "HardExamMinLayer"
    layer: "Render4CNNLayer"
-   param_str: "{\'source\': \'/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_image\', \'seed\': 1337,  \'batch_size\': 192}"
+   param_str: "{\'source\': \'./data/ShapeNet/syn_lmdb_train_image\', \'seed\': 1337,  \'batch_size\': 192}"
  }
 }
 layer {
@@ -47,7 +47,7 @@ layer {
  python_param {
    module: "HardExamMinLayer"
    layer: "Render4CNNLayer"
-   param_str: "{\'source\': \'/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_label\', \'seed\': 1337,  \'batch_size\': 192}"
+   param_str: "{\'source\': \'./data/ShapeNet/syn_lmdb_train_label\', \'seed\': 1337,  \'batch_size\': 192}"
  }
 }
 layer {
@@ -55,7 +55,7 @@ layer {
   type: "Data"
   top: "data"
   data_param {
-    source: "/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_test_image"
+    source: "./data/ShapeNet/syn_lmdb_test_image"
     backend: LMDB
     batch_size: 64
   }
@@ -71,7 +71,7 @@ layer {
   type: "Data"
   top: "label"
   data_param {
-    source: "/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_test_label"
+    source: "./data/ShapeNet/syn_lmdb_test_label"
     backend: LMDB
     batch_size: 64
   }
