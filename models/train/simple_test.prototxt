@@ -1,14 +1,24 @@
 name:"simple test"
+# layer {
+#   name: "label"
+#   type: "Data"
+#   top: "label"
+#   data_param {
+#     source: "/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_label"
+#     backend: LMDB
+#     batch_size: 18
+#   }
+#   include: { phase: TRAIN }
+# }
 layer {
   name: "label"
-  type: "Data"
+  type: "Python"
   top: "label"
-  data_param {
-    source: "/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_label"
-    backend: LMDB
-    batch_size: 38
+  python_param {
+    module: "HardExamMinLayer"
+    layer: "Render4CNNLayer"
+    param_str: "{\'source\': \'/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_label\', \'seed\': 1337,  \'batch_size\': 10}"
   }
-  include: { phase: TRAIN }
 }
 layer {
   name: "labe-slice"

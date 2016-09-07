@@ -1,55 +1,55 @@
 name: "RenderForCNN"
-layer {
-  name: "data"
-  type: "Data"
-  top: "data"
-  data_param {
-    source: "/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_image"
-    backend: LMDB
-    batch_size: 192
-
-  }
-
-  transform_param {
-    crop_size: 227
-    mean_value: 104
-    mean_value: 117
-    mean_value: 123
-    mirror: false
-  }
-  include: { phase: TRAIN }
-}
-layer {
-  name: "label"
-  type: "Data"
-  top: "label"
-  data_param {
-    source: "/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_label"
-    backend: LMDB
-    batch_size: 192
-  }
-  include: { phase: TRAIN }
-}
 # layer {
-#  name: "data"
-#  type: "Python"
-#  top: "data"
-#  python_param {
-#    module: "HardExamMinLayer"
-#    layer: "Render4CNNLayer"
-#    param_str: "{\'source\': \'/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_image\', \'seed\': 1337,  \'batch_size\': 192}"
-#  }
+#   name: "data"
+#   type: "Data"
+#   top: "data"
+#   data_param {
+#     source: "/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_image"
+#     backend: LMDB
+#     batch_size: 192
+#
+#   }
+#
+#   transform_param {
+#     crop_size: 227
+#     mean_value: 104
+#     mean_value: 117
+#     mean_value: 123
+#     mirror: false
+#   }
+#   include: { phase: TRAIN }
 # }
 # layer {
-#  name: "label"
-#  type: "Python"
-#  top: "label"
-#  python_param {
-#    module: "HardExamMinLayer"
-#    layer: "Render4CNNLayer"
-#    param_str: "{\'source\': \'/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_label\', \'seed\': 1337,  \'batch_size\': 192}"
-#  }
+#   name: "label"
+#   type: "Data"
+#   top: "label"
+#   data_param {
+#     source: "/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_label"
+#     backend: LMDB
+#     batch_size: 192
+#   }
+#   include: { phase: TRAIN }
 # }
+layer {
+ name: "data"
+ type: "Python"
+ top: "data"
+ python_param {
+   module: "HardExamMinLayer"
+   layer: "Render4CNNLayer"
+   param_str: "{\'source\': \'/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_image\', \'seed\': 1337,  \'batch_size\': 192}"
+ }
+}
+layer {
+ name: "label"
+ type: "Python"
+ top: "label"
+ python_param {
+   module: "HardExamMinLayer"
+   layer: "Render4CNNLayer"
+   param_str: "{\'source\': \'/media/Work_4T/qchen/RenderForCNN/data/syn_lmdbs/syn_lmdb_train_label\', \'seed\': 1337,  \'batch_size\': 192}"
+ }
+}
 layer {
   name: "data"
   type: "Data"
