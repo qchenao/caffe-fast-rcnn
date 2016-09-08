@@ -23,11 +23,9 @@ def Read_Render4CNN(lmdb_file, index):
     datum = caffe_pb2.Datum()
     data = []
     for ind in index:
-
+        print 'ind',ind
         buf = lmdb_txn.get('%010d'%ind)
         datum.ParseFromString(bytes(buf))
-        if (ind!=datum.label):
-            raise Exception('index wrong')
         tmp = caffe.io.datum_to_array(datum)
         data = np.append(data,tmp)
         #im = data.astype(np.uint8)

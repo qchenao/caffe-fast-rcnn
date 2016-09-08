@@ -4,14 +4,17 @@ import random
 import os, struct
 from array import array
 import share_data
-from lmdb_reader import Read_Render4CNN
+#from lmdb_reader import Read_Render4CNN
+from lmdb_para import read_lmdb
+import scipy.misc
+import time
 import pdb
-
 
 class Render4CNNLayer(caffe.Layer):
 
     def setup(self, bottom, top):
 
+        self.thread = None
         self.idx = []
         self.data = []
         params = eval(self.param_str_)
@@ -31,12 +34,9 @@ class Render4CNNLayer(caffe.Layer):
         self.iidx = np.arange(self.batch_size)
         self.idx = share_data.Render4CNN_Ind[self.iidx]
 
-
-
     def reshape(self, bottom, top):
 
-        self.data = Read_Render4CNN(self.source,self.iidx)
-
+        self.data = np.array(read_lmdb(self.source, self.iidx))
         if 'image' in self.source:
             self.data = self.data.reshape(self.batch_size,3,227,227)
             self.data -= share_data.imgnet_mean
@@ -46,10 +46,10 @@ class Render4CNNLayer(caffe.Layer):
             self.data = self.data.reshape(self.batch_size,4,1,1)
 
 
-
     def forward(self, bottom, top):
         # assign output
-
+        if self.thread is not None:
+            self.join_worker()
         top[0].data[...] = self.data
 
         #training small amount of data
@@ -57,18 +57,17 @@ class Render4CNNLayer(caffe.Layer):
         self.iidx = (self.iidx + self.batch_size) % 2314401
 
         #new epoch, shuffle again
+        '''
         if np.max(self.iidx) < self.batch_size:
             share_data.Render4CNN_Ind = np.random.randint(0,2314400,size=2314401)
 
         self.idx = share_data.Render4CNN_Ind[self.iidx]
+        '''
 
-
-
-
-
-
-
-
+    def join_worker(self):
+        assert self.thread is not None
+        self.thread.join()
+        self.thread = None
     def backward(self, top, propagate_down, bottom):
         pass
 

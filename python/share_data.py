@@ -9,7 +9,7 @@ count=0
 flag=0
 idx_pool=np.array([])
 
-imgnet_mean=np.ndarray(shape=(3,227,227),dtype=int)
+imgnet_mean=np.ndarray(shape=(3,227,227),dtype=np.uint8)
 imgnet_mean[0] = 104
 imgnet_mean[1] = 117
 imgnet_mean[2] = 123
