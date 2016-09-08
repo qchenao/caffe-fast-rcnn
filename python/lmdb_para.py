@@ -1,7 +1,6 @@
 import caffe
 import lmdb
 import numpy as np
-import matplotlib.pyplot as plt
 from caffe.proto import caffe_pb2
 from multiprocessing.dummy import Pool as ThreadPool
 import time
