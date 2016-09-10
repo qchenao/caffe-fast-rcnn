@@ -36,9 +36,10 @@ layer {
  top: "data"
  python_param {
    module: "HardExamMinLayer"
-   layer: "Render4CNNLayer"
+   layer: "Render4CNNLayer_active"
    param_str: "{\'source\': \'./data/ShapeNet/syn_lmdb_train_image\', \'seed\': 1337,  \'batch_size\': 192}"
  }
+
 }
 layer {
  name: "label"
@@ -46,37 +47,38 @@ layer {
  top: "label"
  python_param {
    module: "HardExamMinLayer"
-   layer: "Render4CNNLayer"
+   layer: "Render4CNNLayer_active"
    param_str: "{\'source\': \'./data/ShapeNet/syn_lmdb_train_label\', \'seed\': 1337,  \'batch_size\': 192}"
  }
+ 
 }
-layer {
-  name: "data"
-  type: "Data"
-  top: "data"
-  data_param {
-    source: "./data/ShapeNet/syn_lmdb_test_image"
-    backend: LMDB
-    batch_size: 64
-  }
-  transform_param {
-    crop_size: 227
-    mean_file: "/media/Work_4T/qchen/RenderForCNN/train/imagenet_mean.binaryproto"
-    mirror: false
-  }
-  include: { phase: TEST }
-}
-layer {
-  name: "label"
-  type: "Data"
-  top: "label"
-  data_param {
-    source: "./data/ShapeNet/syn_lmdb_test_label"
-    backend: LMDB
-    batch_size: 64
-  }
-  include: { phase: TEST }
-}
+# layer {
+#   name: "data"
+#   type: "Data"
+#   top: "data"
+#   data_param {
+#     source: "./data/ShapeNet/syn_lmdb_test_image"
+#     backend: LMDB
+#     batch_size: 64
+#   }
+#   transform_param {
+#     crop_size: 227
+#     mean_file: "/media/Work_4T/qchen/RenderForCNN/train/imagenet_mean.binaryproto"
+#     mirror: false
+#   }
+#   include: { phase: TEST }
+# }
+# layer {
+#   name: "label"
+#   type: "Data"
+#   top: "label"
+#   data_param {
+#     source: "./data/ShapeNet/syn_lmdb_test_label"
+#     backend: LMDB
+#     batch_size: 64
+#   }
+#   include: { phase: TEST }
+# }
 
 layer {
   name: "labe-slice"
@@ -455,7 +457,7 @@ layer {
   type: "Python"
   python_param {
     module: "LossLayer"
-    layer: "SoftmaxViewLoss"
+    layer: "SoftmaxViewLoss_active"
     param_str: "{\'bandwidth\': 15, \'sigma\': 5,  \'pos_weight\': 1, \'neg_weight\': 0, \'period\': 360}"
   }
   bottom: "fc-azimuth"
@@ -471,35 +473,122 @@ layer {
   top: "accuracy_azimuth"
   python_param {
     module: "AccuracyLayer"
-    layer: "AccuracyView"
-    param_str: "{\'tol_angle\': 15,  \'period\': 360}"
+    layer: "AccuracyView_active"
+    param_str: "{\'tol_angle\': 15,  \'period\': 360, \'threshold\': 0.9}"
   }
 }
 
+# layer {
+#   name: "fc-elevation"
+#   type: "InnerProduct"
+#   bottom: "fc7"
+#   top: "fc-elevation"
+#   param {
+#      lr_mult: 1
+#      decay_mult: 1
+#     }
+#   param {
+#      lr_mult: 2
+#      decay_mult: 0
+#      }
+#  inner_product_param {
+#     num_output: 4320
+#     weight_filler {
+#         type: "gaussian"
+#         std: 0.01
+#     }
+#     bias_filler {
+#         type: "constant"
+#         value: 0
+#         }
+#     }
+# }
+#
+# layer {
+#   name: "loss_elevation"
+#   type: "Python"
+#   python_param {
+#     module: "LossLayer"
+#     layer: "SoftmaxViewLoss"
+#     param_str: "{\'bandwidth\': 5, \'sigma\': 3,  \'pos_weight\': 1, \'neg_weight\': 0, \'period\': 360}"
+#   }
+#   bottom: "fc-elevation"
+#   bottom: "label_elevation"
+#   top: "loss_elevation"
+#   loss_weight: 1
+# }
+#
+# layer {
+#   name: "accuracy_elevation"
+#   type: "Python"
+#   bottom: "fc-elevation"
+#   bottom: "label_elevation"
+#   top: "accuracy_elevation"
+#   python_param {
+#     module: "AccuracyLayer"
+#     layer: "AccuracyView"
+#     param_str: "{\'tol_angle\': 5,  \'period\': 360}"
+#   }
+# }
+# layer {
+#   name: "fc-tilt"
+#   type: "InnerProduct"
+#   bottom: "fc7"
+#   top: "fc-tilt"
+#   param {
+#      lr_mult: 1
+#      decay_mult: 1
+#     }
+#   param {
+#      lr_mult: 2
+#      decay_mult: 0
+#      }
+#   inner_product_param {
+#     num_output: 4320
+#     weight_filler {
+#       type: "gaussian"
+#       std: 0.01
+#     }
+#     bias_filler {
+#       type: "constant"
+#       value: 0
+#     }
+#   }
+# }
+# layer {
+#   name: "loss_tilt"
+#   type: "Python"
+#   python_param {
+#     module: "LossLayer"
+#     layer: "SoftmaxViewLoss"
+#     param_str: "{\'bandwidth\': 5, \'sigma\': 3,  \'pos_weight\': 1, \'neg_weight\': 0, \'period\': 360}"
+#   }
+#   bottom: "fc-tilt"
+#   bottom: "label_tilt"
+#   top: "loss_tilt"
+#   loss_weight: 1
+# }
+#
+# layer {
+#   name: "accuracy_tilt"
+#   type: "Python"
+#   bottom: "fc-tilt"
+#   bottom: "label_tilt"
+#   top: "accuracy_tilt"
+#   python_param {
+#     module: "AccuracyLayer"
+#     layer: "AccuracyView"
+#     param_str: "{\'tol_angle\': 5,  \'period\': 360}"
+#   }
+# }
+
 layer {
-  name: "fc-elevation"
-  type: "InnerProduct"
-  bottom: "fc7"
-  top: "fc-elevation"
-  param {
-     lr_mult: 1
-     decay_mult: 1
-    }
-  param {
-     lr_mult: 2
-     decay_mult: 0
-     }
- inner_product_param {
-    num_output: 4320
-    weight_filler {
-        type: "gaussian"
-        std: 0.01
-    }
-    bias_filler {
-        type: "constant"
-        value: 0
-        }
-    }
+  name: "silence_layer"
+  type: "Silence"
+  bottom: "label_class"
+  bottom: "label_tilt"
+  bottom: "label_elevation"
+
 }
 # layer {
 #   name: "loss_class"
@@ -522,86 +611,3 @@ layer {
 #   bottom: "label_class"
 #   top: "accuracy_class"
 # }
-layer {
-  name: "loss_elevation"
-  type: "Python"
-  python_param {
-    module: "LossLayer"
-    layer: "SoftmaxViewLoss"
-    param_str: "{\'bandwidth\': 5, \'sigma\': 3,  \'pos_weight\': 1, \'neg_weight\': 0, \'period\': 360}"
-  }
-  bottom: "fc-elevation"
-  bottom: "label_elevation"
-  top: "loss_elevation"
-  loss_weight: 1
-}
-
-layer {
-  name: "accuracy_elevation"
-  type: "Python"
-  bottom: "fc-elevation"
-  bottom: "label_elevation"
-  top: "accuracy_elevation"
-  python_param {
-    module: "AccuracyLayer"
-    layer: "AccuracyView"
-    param_str: "{\'tol_angle\': 5,  \'period\': 360}"
-  }
-}
-layer {
-  name: "fc-tilt"
-  type: "InnerProduct"
-  bottom: "fc7"
-  top: "fc-tilt"
-  param {
-     lr_mult: 1
-     decay_mult: 1
-    }
-  param {
-     lr_mult: 2
-     decay_mult: 0
-     }
-  inner_product_param {
-    num_output: 4320
-    weight_filler {
-      type: "gaussian"
-      std: 0.01
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-  }
-}
-layer {
-  name: "loss_tilt"
-  type: "Python"
-  python_param {
-    module: "LossLayer"
-    layer: "SoftmaxViewLoss"
-    param_str: "{\'bandwidth\': 5, \'sigma\': 3,  \'pos_weight\': 1, \'neg_weight\': 0, \'period\': 360}"
-  }
-  bottom: "fc-tilt"
-  bottom: "label_tilt"
-  top: "loss_tilt"
-  loss_weight: 1
-}
-
-layer {
-  name: "accuracy_tilt"
-  type: "Python"
-  bottom: "fc-tilt"
-  bottom: "label_tilt"
-  top: "accuracy_tilt"
-  python_param {
-    module: "AccuracyLayer"
-    layer: "AccuracyView"
-    param_str: "{\'tol_angle\': 5,  \'period\': 360}"
-  }
-}
-
-layer {
-  name: "silence_layer"
-  type: "Silence"
-  bottom: "label_class"
-}

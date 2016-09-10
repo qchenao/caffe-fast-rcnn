@@ -1,20 +1,9 @@
 import caffe
 import lmdb
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from caffe.proto import caffe_pb2
-# Wei Yang 2015-08-19
-# Source
-#   Read LevelDB/LMDB
-#   ==================
-#       http://research.beenfrog.com/code/2015/03/28/read-leveldb-lmdb-for-caffe-with-python.html
-#   Plot image
-#   ==================
-#       http://www.pyimagesearch.com/2014/11/03/display-matplotlib-rgb-image/
-#   Creating LMDB in python
-#   ==================
-#       http://deepdish.io/2015/04/28/creating-lmdb-in-python/
-
+lmdb_file = '../data/ShapeNet/syn_lmdb_train_label'
 
 def Read_Render4CNN(lmdb_file, index):
 
@@ -35,7 +24,8 @@ def Read_Render4CNN(lmdb_file, index):
 
     return data
     #lmdb_cursor = lmdb_txn.cursor()
-
+data = Read_Render4CNN(lmdb_file, [0,402687-1,402687, 529866-1, 529866, 708877-1, 708877, 888483-1, 888483, 1067546-1, 1067546, 1242939, 1242939-1, 1419838-1, 1419838, 1595969-1, 1595969, 1775589-1, 1775589-1,1775589,1955446-1, 1955446, 2135152-1,2135152])
+print data
 
     #for key, value in lmdb_cursor:
     #     datum.ParseFromString(value)

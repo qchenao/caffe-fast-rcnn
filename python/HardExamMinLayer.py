@@ -3,20 +3,85 @@ import numpy as np
 import random
 import os, struct
 from array import array
-import share_data
+import share_data as sd
 #from lmdb_reader import Read_Render4CNN
 from lmdb_para import read_lmdb
 import scipy.misc
 import time
 import pdb
+from mapping import Map
 
-class Render4CNNLayer(caffe.Layer):
+def batch_sel(board, Map, batch_size):
+    ind = []
+    for i in board:
+        num = max(1, 6 - i) * 10
+        ind = np.append(ind, Map.az2ind(board[i]/24, board[i]*15, (board[i]+1)*15, num))
+        print ind
+        if len(ind) > batch_size:
+            return ind[range(batch_size)]
+#
+# class Render4CNNLayer(caffe.Layer):
+#
+#     def setup(self, bottom, top):
+#
+#         self.thread = None
+#         self.idx = []
+#         self.data = []
+#         params = eval(self.param_str_)
+#         self.source = params['source']
+#         self.batch_size=params.get('batch_size', 64)
+#
+#         # two tops: data and label
+#         if len(top) != 1:
+#             raise Exception("Need to define 1 top: data or label.")
+#         # data layers have no bottoms
+#         if len(bottom) != 0:
+#             raise Exception("Do not define a bottom.")
+#
+#
+#         self.idx = np.arange(self.batch_size)
+#
+#
+#     def reshape(self, bottom, top):
+#
+#         self.data = np.array(read_lmdb(self.source, self.idx))
+#         if 'image' in self.source:
+#             self.data = self.data.reshape(self.batch_size,3,227,227)
+#             self.data -= sd.imgnet_mean
+#             top[0].reshape(self.batch_size,3,227,227)
+#         else:
+#             top[0].reshape(self.batch_size,4,1,1)
+#             self.data = self.data.reshape(self.batch_size,4,1,1)
+#
+#
+#     def forward(self, bottom, top):
+#         # assign output
+#         if self.thread is not None:
+#             self.join_worker()
+#         top[0].data[...] = self.data
+#
+#         #training small amount of data
+#
+#         self.idx = (self.idx + self.batch_size) % 2314401
+#
+#         #new epoch, shuffle again
+#         '''
+#         if np.max(self.iidx) < self.batch_size:
+#             share_data.Render4CNN_Ind = np.random.randint(0,2314400,size=2314401)
+#
+#         self.idx = share_data.Render4CNN_Ind[self.iidx]
+#         '''
+#
+#     def backward(self, top, propagate_down, bottom):
+#         pass
+
+class Render4CNNLayer_active(caffe.Layer):
 
     def setup(self, bottom, top):
 
-        self.thread = None
-        self.idx = []
+
         self.data = []
+        self.iter = 0
         params = eval(self.param_str_)
         self.source = params['source']
         self.init = params.get('init', True)
@@ -30,16 +95,17 @@ class Render4CNNLayer(caffe.Layer):
         if len(bottom) != 0:
             raise Exception("Do not define a bottom.")
 
-
+        #init batch index
         self.iidx = np.arange(self.batch_size)
-        self.idx = share_data.Render4CNN_Ind[self.iidx]
+        self.idx = sd.idx_pool[self.iidx]
+
 
     def reshape(self, bottom, top):
 
-        self.data = np.array(read_lmdb(self.source, self.iidx))
+        self.data = np.array(read_lmdb(self.source, self.idx))
         if 'image' in self.source:
             self.data = self.data.reshape(self.batch_size,3,227,227)
-            self.data -= share_data.imgnet_mean
+            self.data -= sd.imgnet_mean
             top[0].reshape(self.batch_size,3,227,227)
         else:
             top[0].reshape(self.batch_size,4,1,1)
@@ -48,87 +114,32 @@ class Render4CNNLayer(caffe.Layer):
 
     def forward(self, bottom, top):
         # assign output
-        if self.thread is not None:
-            self.join_worker()
+
         top[0].data[...] = self.data
 
+        with open("data_ohem.txt", "a") as f:
+            f.write(str(self.idx))
+            f.write('\n')
+        f.close()
         #training small amount of data
+        if (self.iter < 28800):
+            self.iidx = (self.iidx + self.batch_size) % len(sd.idx_pool)
+            self.idx = sd.idx_pool[self.iidx]
 
-        self.iidx = (self.iidx + self.batch_size) % 2314401
-
-        #new epoch, shuffle again
-        '''
-        if np.max(self.iidx) < self.batch_size:
-            share_data.Render4CNN_Ind = np.random.randint(0,2314400,size=2314401)
-
-        self.idx = share_data.Render4CNN_Ind[self.iidx]
-        '''
-
-    def join_worker(self):
-        assert self.thread is not None
-        self.thread.join()
-        self.thread = None
-    def backward(self, top, propagate_down, bottom):
-        pass
-
-
-class Render4CNNLayer_hard(caffe.Layer):
-
-    def setup(self, bottom, top):
-
-        self.idx = []
-        self.data = []
-        params = eval(self.param_str_)
-        self.source = params['source']
-        self.batch_size=params.get('batch_size', 64)
-
-        # two tops: data and label
-        if len(top) != 1:
-            raise Exception("Need to define 1 top: data or label.")
-        # data layers have no bottoms
-        if len(bottom) != 0:
-            raise Exception("Do not define a bottom.")
-
-
-        self.iidx = np.arange(self.batch_size)
-        self.idx = share_data.Render4CNN_Ind[self.iidx]
-
-
-
-    def reshape(self, bottom, top):
-
-        self.data = Read_Render4CNN(self.source,self.idx)
-
-        if 'image' in self.source:
-            self.data = self.data.reshape(self.batch_size,3,227,227)
-            self.data -= share_data.imgnet_mean
-            top[0].reshape(self.batch_size,3,227,227)
         else:
-            top[0].reshape(self.batch_size,4,1,1)
-            self.data = self.data.reshape(self.batch_size,4,1,1)
-        print 'iidx', self.idx
+            self.idx = batch_sel( sd.az_board, sd.Map, self.batch_size)
 
-
-    def forward(self, bottom, top):
-        # assign output
-        top[0].data[...] = self.data
-
-
-        self.iidx = (self.iidx + self.batch_size) % 2314401
-
-        #new epoch, shuffle again
-        if np.max(self.iidx) < self.batch_size:
-            share_data.Render4CNN_Ind = np.random.randint(0,2314400,size=2314401)
-
-        self.idx = share_data.Render4CNN_Ind[self.iidx]
-
-
-
-
-
+        self.iter += 1
+        if (self.iter == 120000):
+            with open("ohem_record.txt", "a") as f:
+                f.write(str(sd.record))
+                f.write('\n')
+            f.close()
 
     def backward(self, top, propagate_down, bottom):
         pass
+
+
 
 
 class MySoftmaxLayer_hard(caffe.Layer):

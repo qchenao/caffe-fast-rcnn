@@ -4,9 +4,9 @@ lr_policy: "step"
 gamma: 0.1
 stepsize: 20000
 display: 20
-max_iter: 1000
+max_iter: 120000
 momentum: 0.9
 weight_decay: 0.0005
-snapshot: 60000
-snapshot_prefix: "snapshots"
+snapshot: 10000
+snapshot_prefix: "ohem_snap/"
 solver_mode: GPU
