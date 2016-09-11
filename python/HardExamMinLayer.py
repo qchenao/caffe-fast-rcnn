@@ -10,13 +10,13 @@ import scipy.misc
 import time
 import pdb
 from mapping import Map
-import time
 
 def batch_sel(board, Map, batch_size):
     ind = []
     for i in board:
         num = max(1, 6 - i) * 10
         ind = np.append(ind, Map.az2ind(board[i]/24, board[i]*15, (board[i]+1)*15, num))
+        print ind
         if len(ind) > batch_size:
             return ind[range(batch_size)]
 #
@@ -102,13 +102,7 @@ class Render4CNNLayer_active(caffe.Layer):
 
     def reshape(self, bottom, top):
 
-        start_time = time.time()
         self.data = np.array(read_lmdb(self.source, self.idx))
-        elapsed_time = time.time() - start_time
-        with open("read_time.txt", "a") as f:
-            f.write(str(elapsed_time))
-            f.write('\n')
-        f.close()
         if 'image' in self.source:
             self.data = self.data.reshape(self.batch_size,3,227,227)
             self.data -= sd.imgnet_mean
@@ -127,24 +121,14 @@ class Render4CNNLayer_active(caffe.Layer):
             f.write(str(self.idx))
             f.write('\n')
         f.close()
-        start_time = time.time()
-        
         #training small amount of data
         if (self.iter < 28800):
             self.iidx = (self.iidx + self.batch_size) % len(sd.idx_pool)
             self.idx = sd.idx_pool[self.iidx]
+
         else:
-            if 'image' in self.source:
-                sd.idx_tmp = batch_sel( sd.ang_board, sd.Map, self.batch_size)
-                np.sort(sd.idx_tmp)
-                self.idx = sd.idx_tmp
-            else:
-                self.idx = sd.idx_tmp
-        elapsed_time = time.time() - start_time
-        with open("sel_time.txt", "a") as f:
-            f.write(str(elapsed_time))
-            f.write('\n')
-        f.close()
+            self.idx = batch_sel( sd.az_board, sd.Map, self.batch_size)
+
         self.iter += 1
         if (self.iter == 120000):
             with open("ohem_record.txt", "a") as f:
