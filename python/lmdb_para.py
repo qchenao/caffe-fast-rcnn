@@ -7,7 +7,7 @@ import time
 
 def read_lmdb(lmdb_file, index):
 
-    pool = ThreadPool(3)
+    pool = ThreadPool(4)
     read_para = Read_Render4CNN(lmdb_file)
     #print read_para(0).shape
     start_time = time.time()

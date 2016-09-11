@@ -19,11 +19,14 @@ class SoftmaxViewLoss(caffe.Layer):
         self.diff = []
 
         params = eval(self.param_str_)
+        self.type_ = params['type']
         self.bandwidth = params.get('self.bandwidth', 5)
         self.sigma = float(params.get('sigma', 3))
         self.pos_weight=params.get('pos_weight', 1)
         self.neg_weight=params.get('neg_weight', 0)
         self.period=int(params.get('period', 360))
+
+
 
         self.weights_sum = np.sum(np.exp(-abs(np.arange(-self.bandwidth, self.bandwidth+1))/ self.sigma))
 
@@ -115,7 +118,7 @@ class SoftmaxViewLoss(caffe.Layer):
         tmp -= np.exp(-abs(k[nonbg_ind]) / self.sigma) * np.log(tmp + 10**(-37))
         tmp = np.sum(tmp, axis=1) * self.weight.T[0][0][nonbg_ind]
         top[0].data[...] = np.sum(tmp) / num
-        with open("az_baseline_loss.txt", "a") as f:
+        with open('baseline/'+self.type_+'_loss.txt', "a") as f:
             f.write(str(top[0].data[0]))
             f.write('\n')
         f.close()
@@ -152,6 +155,7 @@ class SoftmaxViewLoss_active(caffe.Layer):
         self.diff = []
 
         params = eval(self.param_str_)
+        self.type_ = params['type']
         self.bandwidth = params.get('self.bandwidth', 5)
         self.sigma = float(params.get('sigma', 3))
         self.pos_weight=params.get('pos_weight', 1)
@@ -248,7 +252,7 @@ class SoftmaxViewLoss_active(caffe.Layer):
         tmp -= np.exp(-abs(k[nonbg_ind]) / self.sigma) * np.log(tmp + 10**(-37))
         tmp = np.sum(tmp, axis=1) * self.weight.T[0][0][nonbg_ind]
         top[0].data[...] = np.sum(tmp) / num
-        with open("az_ohem_loss.txt", "a") as f:
+        with open('ohem/'+self.type_+'_loss.txt', "a") as f:
             f.write(str(top[0].data[0]))
             f.write('\n')
         f.close()

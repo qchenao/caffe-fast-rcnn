@@ -50,7 +50,7 @@ layer {
    layer: "Render4CNNLayer_active"
    param_str: "{\'source\': \'./data/ShapeNet/syn_lmdb_train_label\', \'seed\': 1337,  \'batch_size\': 192}"
  }
- 
+
 }
 # layer {
 #   name: "data"
@@ -458,7 +458,7 @@ layer {
   python_param {
     module: "LossLayer"
     layer: "SoftmaxViewLoss_active"
-    param_str: "{\'bandwidth\': 15, \'sigma\': 5,  \'pos_weight\': 1, \'neg_weight\': 0, \'period\': 360}"
+    param_str: "{\'type\': \'az\',\'bandwidth\': 15, \'sigma\': 5,  \'pos_weight\': 1, \'neg_weight\': 0, \'period\': 360}"
   }
   bottom: "fc-azimuth"
   bottom: "label_azimuth"
@@ -474,7 +474,7 @@ layer {
   python_param {
     module: "AccuracyLayer"
     layer: "AccuracyView_active"
-    param_str: "{\'tol_angle\': 15,  \'period\': 360, \'threshold\': 0.9}"
+    param_str: "{\'type\': \'az\',\'tol_angle\': 15,  \'period\': 360, \'threshold\': 0.9}"
   }
 }
 

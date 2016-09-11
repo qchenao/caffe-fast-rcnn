@@ -9,9 +9,15 @@ class AccuracyView(caffe.Layer):
         if bottom[0].num != bottom[1].num:
             raise Exception("The data and label should have the same number.")
         self.iter = 0
+
         params = eval(self.param_str_)
-        self.tol_angle = params.get('tol_angle', 5)
+        self.type_ = params['type']
+        self.tol_angle = int(params.get('tol_angle', 5))
         self.period = int(params.get('period', 360))
+
+        sd.cor_ang = np.zeros(self.period/self.tol_angle*12,dtype=np.int)
+        sd.ang = np.zeros(self.period/self.tol_angle*12,dtype=np.int)
+
 
 
     def reshape(self, bottom, top):
@@ -41,23 +47,23 @@ class AccuracyView(caffe.Layer):
             #print pred_angle,'vs',angle[i]
             error = min(abs(pred_angle - angle[i]), self.period - abs(pred_angle - angle[i]))
             #print 'error', error
-            sd.az[cls_idx[i] * int(self.period /self.tol_angle) + angle[i] / int(self.tol_angle)] += 1
+            sd.corang[cls_idx[i] * int(self.period /self.tol_angle) + angle[i] / int(self.tol_angle)] += 1
             if (error <= self.tol_angle):
-                sd.cor_az[cls_idx[i] * int(self.period /self.tol_angle) + angle[i] / int(self.tol_angle)] += 1
+                sd.cor_ang[cls_idx[i] * int(self.period /self.tol_angle) + angle[i] / int(self.tol_angle)] += 1
                 accuracy += 1
 
             #print 'share_data.mis_col', sd.mis_col
 
-        sd.record = sd.cor_az / (sd.az + 10**(-10))
-        sd.az_board = np.argsort(sd.record)
+        sd.record = sd.cor_ang / (sd.corang + 10**(-10))
+        sd.ang_board = np.argsort(sd.record)
         top[0].data[0] = accuracy / nonbkg_cnt
-        with open("az_baseline_acc.txt", "a") as f:
+        with open('baseline/'+self.type_+'_acc.txt', "a") as f:
             f.write(str(top[0].data[0]))
             f.write('\n')
         f.close()
         self.iter += 1
         if self.iter == 12000 :
-            with open("baseline_record.txt", "a") as f:
+            with open('baseline/'+self.type_+'_record.txt', "a") as f:
                 f.write(str(sd.record))
                 f.write('\n')
             f.close()
@@ -68,11 +74,12 @@ class AccuracyView(caffe.Layer):
 class AccuracyView_active(caffe.Layer):
 
     def setup(self, bottom, top):
-
+        self.iter = 0
         if bottom[0].num != bottom[1].num:
             raise Exception("The data and label should have the same number.")
 
         params = eval(self.param_str_)
+        self.type_ = params['type']
         self.tol_angle = params.get('tol_angle', 5)
         self.period = int(params.get('period', 360))
         self.threshold = params.get('threshold', 0.9)
@@ -105,20 +112,26 @@ class AccuracyView_active(caffe.Layer):
             #print pred_angle,'vs',angle[i]
             error = min(abs(pred_angle - angle[i]), self.period - abs(pred_angle - angle[i]))
             #print 'error', error
-            sd.az[cls_idx[i] * int(self.period /self.tol_angle) + angle[i] / int(self.tol_angle)] += 1
+            sd.cor_ang[cls_idx[i] * int(self.period /self.tol_angle) + angle[i] / int(self.tol_angle)] += 1
             if (error <= self.tol_angle):
-                sd.cor_az[cls_idx[i] * int(self.period /self.tol_angle) + angle[i] / int(self.tol_angle)] += 1
+                sd.cor_ang[cls_idx[i] * int(self.period /self.tol_angle) + angle[i] / int(self.tol_angle)] += 1
                 accuracy += 1
 
             #print 'share_data.mis_col', sd.mis_col
 
-        sd.record = sd.cor_az / (sd.az + 10**(-10))
-        sd.az_board = np.argsort(sd.record)
+        sd.record = sd.cor_ang / (sd.cor_ang + 10**(-10))
+        sd.ang_board = np.argsort(sd.record)
         top[0].data[0] = accuracy / nonbkg_cnt
-        with open("az_ohem_acc.txt", "a") as f:
+        with open('ohem/'+self.type_+'_acc.txt', "a") as f:
             f.write(str(top[0].data[0]))
             f.write('\n')
         f.close()
+        self.iter += 1
+        if self.iter == 12000 :
+            with open('ohem/'+self.type_+'_record.txt', "a") as f:
+                f.write(str(sd.record))
+                f.write('\n')
+            f.close()
 
     def backward(self, top, propagate_down, bottom):
         pass

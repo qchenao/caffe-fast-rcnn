@@ -20,9 +20,9 @@ Render4CNN_Ind = np.random.randint(0,2314400,size=2314401)
 state = 1
 iters = 0
 
-cor_az = np.zeros(24*12,dtype=np.int)
-az = np.zeros(24*12,dtype=np.int)
-az_board = []
+cor_ang = np.zeros(24*12,dtype=np.int)
+ang = np.zeros(24*12,dtype=np.int)
+ang_board = []
 record = []
 
 Map = Map()
@@ -30,3 +30,4 @@ idx_pool = []
 for i in range(288):
     idx_pool = np.append(idx_pool, Map.az2ind(i/24, i*15, (i+1)*15, 19200))
 np.random.shuffle(idx_pool)
+idx_tmp = []
